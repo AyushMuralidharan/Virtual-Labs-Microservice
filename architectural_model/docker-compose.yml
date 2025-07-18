@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  arch-model-service:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./temp_visualizations:/app/temp_visualizations
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped 

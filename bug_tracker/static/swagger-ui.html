@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bug Tracker API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3/swagger-ui.css">
+    <style>
+        .service-alert {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .service-alert.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        .service-alert.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+    </style>
+</head>
+<body>
+    <div id="service-alerts"></div>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "/openapi.json",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+            });
+
+            // Check service status
+            fetch('/service-status')
+                .then(response => response.json())
+                .then(data => {
+                    const alertsDiv = document.getElementById('service-alerts');
+                    let hasUnavailableServices = false;
+
+                    for (const [service, status] of Object.entries(data)) {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `service-alert ${status ? 'success' : 'error'}`;
+                        alertDiv.textContent = `${service} service is ${status ? 'available' : 'unavailable'}`;
+                        alertsDiv.appendChild(alertDiv);
+                        alertDiv.style.display = 'block';
+
+                        if (!status) {
+                            hasUnavailableServices = true;
+                        }
+                    }
+
+                    if (hasUnavailableServices) {
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'service-alert error';
+                        warningDiv.textContent = 'Some services are unavailable. Certain API endpoints may not function correctly.';
+                        alertsDiv.insertBefore(warningDiv, alertsDiv.firstChild);
+                        warningDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking service status:', error);
+                });
+        }
+    </script>
+</body>
+</html> 

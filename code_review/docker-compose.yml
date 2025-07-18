@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  code-review:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  web-interface:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "8002:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - API_GATEWAY_URL=http://api-gateway:8080
+      - BUG_SERVICE=http://bug-tracker:8000
+      - CODE_REVIEW_SERVICE=http://code-review:8000
+    depends_on:
+      - mongodb
+      - code-review
+    networks:
+      - app-network
+
+  api-gateway:
+    build: ../user-role-system-microservices/api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+  auth-service:
+    build: ../user-role-system-microservices/auth-service
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/auth-db
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  bug-tracker:
+    build: ../bug_tracker
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  calendar-service:
+    build: ../calendar
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/calendar-db
+      - BUG_SERVICE=http://bug-tracker:8000
+      - CODE_REVIEW_SERVICE=http://code-review:8000
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data: 

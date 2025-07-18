@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  version-control-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./repositories:/app/repositories
+    environment:
+      - REPOS_DIR=/app/repositories
+    restart: unless-stopped

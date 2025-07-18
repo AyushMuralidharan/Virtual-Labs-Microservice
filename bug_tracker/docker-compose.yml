@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  bug-tracker:
+    build: ./bug_tracker
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/bug-tracker-db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  code-review:
+    build: ./code_review
+    ports:
+      - "8001:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/code-review-db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  calendar-service:
+    build: 
+      context: ./calendar
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/calendar-db
+      - BUG_SERVICE=http://bug-tracker:8000
+      - CODE_REVIEW_SERVICE=http://code-review:8000
+    depends_on:
+      - mongodb
+      - bug-tracker
+      - code-review
+    networks:
+      - app-network
+
+  calendar-client:
+    build:
+      context: ./calendar/client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://calendar-service:5000
+    depends_on:
+      - calendar-service
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data: 

@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=content_management
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  bug-tracker:
+    build:
+      context: ./bug_tracker
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/bugtracker_db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+      - FORUM_SERVICE_URL=http://forum-service:8004
+      - VERSION_CONTROL_URL=http://version-control:8002
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bug_tracker:/app
+      - ./bug_tracker/static:/app/static
+    depends_on:
+      - mongodb
+      - calendar-service
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  code-review:
+    build:
+      context: ./code_review
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/code-review-db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+      - FORUM_SERVICE_URL=http://forum-service:8004
+      - VERSION_CONTROL_URL=http://version-control:8002
+    depends_on:
+      - mongodb
+      - calendar-service
+    networks:
+      - app-network
+
+  forum-service:
+    build:
+      context: ./bug_tracker/forum-service/forum-service
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/content_management
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+    depends_on:
+      - postgres
+      - calendar-service
+    networks:
+      - app-network
+
+  calendar-service:
+    build:
+      context: ./calendar
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/calendar-app
+      - BUG_SERVICE=http://bug-tracker:8000
+      - CODE_REVIEW_SERVICE=http://code-review:8000
+      - FORUM_SERVICE=http://forum-service:8004
+      - ARCH_MODEL_SERVICE=http://architectural-model:8003
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  calendar-client:
+    build:
+      context: ./calendar/client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - calendar-service
+    networks:
+      - app-network
+
+  architectural-model:
+    build:
+      context: ./architectural_model
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./architectural_model/temp_visualizations:/app/temp_visualizations
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URL=mongodb://mongodb:27017/arch_model_db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+    depends_on:
+      - mongodb
+      - calendar-service
+    networks:
+      - app-network
+
+  version-control:
+    build:
+      context: ./version_control
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./version_control/repositories:/app/repositories
+    environment:
+      - REPOS_DIR=/app/repositories
+      - MONGODB_URL=mongodb://mongodb:27017/version_control_db
+      - CALENDAR_SERVICE_URL=http://calendar-service:5000
+    depends_on:
+      - mongodb
+      - calendar-service
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  postgres_data:

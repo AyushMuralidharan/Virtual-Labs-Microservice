@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <h1>Bug Tracker & Code Review System</h1>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </nav>
+
+        <div class="dashboard">
+            <div class="section">
+                <h2>Bug Tracker</h2>
+                <button onclick="toggleForm('bugForm')">Create New Bug</button>
+                
+                <form id="bugForm" class="hidden" method="POST" action="/bugs/create">
+                    <input type="text" name="title" placeholder="Bug Title" required>
+                    <textarea name="description" placeholder="Bug Description" required></textarea>
+                    <button type="submit">Submit Bug</button>
+                </form>
+
+                <div class="list">
+                    {% for bug in bugs %}
+                    <div class="item">
+                        <h3>{{ bug.title }}</h3>
+                        <p>{{ bug.description }}</p>
+                        <span class="status">Status: {{ bug.status }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Code Reviews</h2>
+                <button onclick="toggleForm('reviewForm')">Create Review Request</button>
+                
+                <form id="reviewForm" class="hidden" method="POST" action="/reviews/create">
+                    <input type="text" name="title" placeholder="Review Title" required>
+                    <textarea name="code" placeholder="Code to Review" required></textarea>
+                    <textarea name="description" placeholder="Review Description" required></textarea>
+                    <button type="submit">Submit Review</button>
+                </form>
+
+                <div class="list">
+                    {% for review in reviews %}
+                    <div class="item">
+                        <h3>{{ review.title }}</h3>
+                        <pre><code>{{ review.code }}</code></pre>
+                        <p>{{ review.description }}</p>
+                        <span class="status">Status: {{ review.status }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>
